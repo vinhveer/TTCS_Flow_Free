@@ -8,7 +8,7 @@ from GridData import GridData
 WINDOW_SIZE = 800
 
 # Dynamic cell and grid calculations
-GRID_SIZE = 6
+GRID_SIZE = GridData().getSize()
 CELL_SIZE = (WINDOW_SIZE - 100) // GRID_SIZE  # Adjust cell size to fit window
 WINDOW_PADDING = (WINDOW_SIZE - (CELL_SIZE * GRID_SIZE)) // 2
 CIRCLE_SIZE = CELL_SIZE * 0.6
@@ -20,8 +20,7 @@ class FlowFreeGame(QMainWindow):
         self.setWindowTitle("Flow Free Game")
         self.setFixedSize(WINDOW_SIZE, WINDOW_SIZE)
 
-        self.grid_data = GridData(GRID_SIZE)
-        self.grid_data.random_generate()
+        self.grid_data = GridData()
 
         self.endpoints = []
         self.completed_paths = []
@@ -103,19 +102,32 @@ class FlowFreeGame(QMainWindow):
         row = (y - WINDOW_PADDING) // CELL_SIZE
 
         if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
+            # Kiểm tra nếu nhấn vào một đường đã vẽ
+            path, color = self.get_path_at_point(row, col)
+            if path:
+                # Xóa đường khỏi danh sách completed_paths
+                self.completed_paths.remove((path, color))
+                
+                # Xóa dấu vết trên path_grid
+                for r, c in path:
+                    self.grid_data.path_grid[r][c] = 0
+                
+                self.update()
+                return
+
+            # Nếu nhấn vào một điểm bắt đầu, bắt đầu vẽ đường mới
             color_number = self.grid_data.get_color_point(row, col)
             if color_number > 0:
-                # Xóa đường cũ của màu này
                 self.grid_data.clear_path_for_color(color_number)
-                
+
                 self.is_drawing = True
                 self.current_path = [(row, col)]
                 self.current_color = self.grid_data.get_color(color_number)
                 self.current_color_number = color_number
-                
-                # Đánh dấu điểm bắt đầu
+
                 self.grid_data.update_path(row, col, color_number)
                 self.update()
+
 
     def mouseMoveEvent(self, event):
         if not self.is_drawing or not self.current_path:
@@ -291,3 +303,11 @@ class FlowFreeGame(QMainWindow):
             main_path = self.create_rounded_path(path)
             painter.setPen(QPen(color, PATH_WIDTH, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
             painter.drawPath(main_path)
+
+    def get_path_at_point(self, row, col):
+        """Kiểm tra xem điểm (row, col) thuộc đường nào."""
+        for path, color in self.completed_paths:
+            if (row, col) in path:
+                return path, color
+        return None, None
+
