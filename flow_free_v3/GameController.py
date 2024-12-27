@@ -147,6 +147,9 @@ class GameController:
 
     def _is_valid_move(self, row, col):
         """Kiểm tra nước đi có hợp lệ không"""
+        if not (0 <= row < self.grid_size and 0 <= col < self.grid_size):
+            return False
+
         if not self.current_path:
             return (
                 self.grid_data.get_color_point(row, col) == self.current_color_number and
@@ -159,33 +162,29 @@ class GameController:
         is_horizontal = row == last_row and abs(col - last_col) == 1
         is_vertical = col == last_col and abs(row - last_row) == 1
         
-        # Kiểm tra điểm đích
-        is_endpoint = (self.grid_data.is_endpoint(row, col, self.current_color_number) and 
-                    len(self.current_path) > 1)
+        # Kiểm tra điểm đích 
+        is_endpoint = (
+            self.grid_data.is_endpoint(row, col, self.current_color_number) and 
+            len(self.current_path) > 1 and
+            (is_horizontal or is_vertical)  # Điểm đích cũng phải theo chiều dọc hoặc ngang
+        )
         
-        # Kiểm tra đường đi không đi qua ô đã có đường khác
+        # Kiểm tra không đi qua ô đã có đường khác
         path_is_clear = True
         if is_horizontal or is_vertical:
-            # Kiểm tra ô hiện tại không thuộc đường đi nào khác
             if self.grid_data.path_grid[row][col] != 0:
-                # Cho phép nếu là điểm đích của màu hiện tại
-                if not (self.grid_data.is_endpoint(row, col, self.current_color_number)):
+                if not self.grid_data.is_endpoint(row, col, self.current_color_number):
                     path_is_clear = False
-        
-        # Điều kiện hợp lệ:
-        # 1. Di chuyển theo chiều dọc hoặc ngang
-        # 2. Hoặc là điểm đích
-        # 3. Điểm chưa có trong đường đi hiện tại
-        # 4. Điểm hoặc là trống hoặc là điểm có cùng màu
-        # 5. Đường đi không chồng lên đường khác
-        move_valid = (is_horizontal or is_vertical or is_endpoint)
+
+        # Điều kiện hợp lệ
+        move_valid = (is_horizontal or is_vertical)  
         point_not_in_path = (row, col) not in self.current_path
         color_check = (
             self.grid_data.get_color_point(row, col) == 0 or
             self.grid_data.get_color_point(row, col) == self.current_color_number
         )
 
-        return move_valid and point_not_in_path and color_check and path_is_clear
+        return (move_valid or is_endpoint) and point_not_in_path and color_check and path_is_clear
 
     def _complete_current_path(self):
         """Hoàn thiện đường đi"""

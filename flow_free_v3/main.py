@@ -7,7 +7,7 @@ from GameController import GameController
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Flow Free Game")
+        self.setWindowTitle("Flow Free Game - ")
         self.setGeometry(100, 100, 1000, 800)
 
         # Định nghĩa difficulty_levels là thuộc tính của class
@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
             
             QLabel {
                 font-size: 25px;
+                font-weight: bold;
                 color: #2c3e50;
                 padding: 5px 0;
             }
@@ -123,6 +124,7 @@ class MainWindow(QMainWindow):
             
             QComboBox:on {
                 border-color: #3498db;
+                font-size: 30px;
             }
         """)
         
@@ -137,7 +139,7 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(title_label)
         
         # Difficulty section
-        difficulty_label = QLabel("Difficulty:")
+        difficulty_label = QLabel("Difficulty")
         self.difficulty_combo = QComboBox()
         self.difficulty_combo.addItems(list(self.difficulty_levels.keys()))
         
@@ -145,7 +147,7 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(self.difficulty_combo)
         
         # Level section
-        level_label = QLabel("Level:")
+        level_label = QLabel("Level")
         self.level_combo = QComboBox()
         # Khởi tạo với levels của difficulty đầu tiên
         self.level_combo.addItems(self.difficulty_levels["Easy"])
