@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QWidget, QMessageBox
 from PyQt5.QtGui import QPainter, QColor, QPen, QBrush, QRadialGradient, QPainterPath, QLinearGradient
 from PyQt5.QtCore import Qt, QRectF
 
@@ -14,10 +14,9 @@ WINDOW_PADDING = (WINDOW_SIZE - (CELL_SIZE * GRID_SIZE)) // 2
 CIRCLE_SIZE = CELL_SIZE * 0.6
 PATH_WIDTH = min(30, CELL_SIZE // 5)  # Scale path width proportionally
 
-class FlowFreeGame(QMainWindow):
+class FlowFreeGame(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Flow Free Game")
         self.setFixedSize(WINDOW_SIZE, WINDOW_SIZE)
 
         self.grid_data = GridData()
@@ -310,4 +309,3 @@ class FlowFreeGame(QMainWindow):
             if (row, col) in path:
                 return path, color
         return None, None
-

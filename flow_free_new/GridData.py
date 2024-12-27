@@ -21,7 +21,7 @@ class GridData:
             14: QColor(93, 173, 226),   # Xanh nhạt
             15: QColor(72, 201, 176)    # Xanh ngọc
         }
-        self.load_from_file("levels/easy-2.txt")
+        self.load_from_file("levels/hard-2.txt")
 
     def load_from_file(self, file_path):
         """Đọc dữ liệu lưới từ file."""
@@ -66,6 +66,10 @@ class GridData:
         return False
 
     def get_color(self, color_number):
+        # Convert QColor to a hashable format if it's a QColor object
+        if isinstance(color_number, QColor):
+            return color_number
+        # Otherwise use the color map as before
         return self.color_map.get(color_number, QColor(200, 200, 200))
 
     def set_color_point(self, row, col, color_number):
