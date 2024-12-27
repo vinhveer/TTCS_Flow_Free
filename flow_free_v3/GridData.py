@@ -135,3 +135,4 @@ class GridData:
 
     def get_original_grid(self):
         return [[self.grid[i][j] for j in range(self.size)] for i in range(self.size)]
+    

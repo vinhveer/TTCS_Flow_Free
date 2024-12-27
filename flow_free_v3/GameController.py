@@ -14,6 +14,9 @@ class GameController:
 
         self.grid_data.set_mode(mode)
         self.grid_data.set_level(level)
+
+        self.grid_data_original.set_mode(mode)
+        self.grid_data_original.set_level(level)
         
         self.endpoints = []
         self.completed_paths = []
@@ -98,6 +101,12 @@ class GameController:
         if 0 <= row < self.grid_size and 0 <= col < self.grid_size:
             # Nếu điểm hiện tại đã có trong đường đi thì bỏ qua
             if (row, col) in self.current_path:
+                # Nếu quay lại điểm trước đó, xóa điểm cuối cùng
+                if len(self.current_path) > 1 and (row, col) == self.current_path[-2]:
+                    last_row, last_col = self.current_path[-1]
+                    self.grid_data.path_grid[last_row][last_col] = 0
+                    self.current_path.pop()
+                    self.renderer.update()
                 return
 
             # Kiểm tra nước đi có hợp lệ không
@@ -146,22 +155,37 @@ class GameController:
 
         last_row, last_col = self.current_path[-1]
         
-        move_valid = (
-            ((abs(row - last_row) == 1 and col == last_col) or 
-             (abs(col - last_col) == 1 and row == last_row)) or
-            
-            (self.grid_data.is_endpoint(row, col, self.current_color_number) and 
-             len(self.current_path) > 1)
-        )
-
+        # Chỉ cho phép di chuyển theo chiều ngang hoặc dọc
+        is_horizontal = row == last_row and abs(col - last_col) == 1
+        is_vertical = col == last_col and abs(row - last_row) == 1
+        
+        # Kiểm tra điểm đích
+        is_endpoint = (self.grid_data.is_endpoint(row, col, self.current_color_number) and 
+                    len(self.current_path) > 1)
+        
+        # Kiểm tra đường đi không đi qua ô đã có đường khác
+        path_is_clear = True
+        if is_horizontal or is_vertical:
+            # Kiểm tra ô hiện tại không thuộc đường đi nào khác
+            if self.grid_data.path_grid[row][col] != 0:
+                # Cho phép nếu là điểm đích của màu hiện tại
+                if not (self.grid_data.is_endpoint(row, col, self.current_color_number)):
+                    path_is_clear = False
+        
+        # Điều kiện hợp lệ:
+        # 1. Di chuyển theo chiều dọc hoặc ngang
+        # 2. Hoặc là điểm đích
+        # 3. Điểm chưa có trong đường đi hiện tại
+        # 4. Điểm hoặc là trống hoặc là điểm có cùng màu
+        # 5. Đường đi không chồng lên đường khác
+        move_valid = (is_horizontal or is_vertical or is_endpoint)
         point_not_in_path = (row, col) not in self.current_path
-
         color_check = (
             self.grid_data.get_color_point(row, col) == 0 or
             self.grid_data.get_color_point(row, col) == self.current_color_number
         )
 
-        return move_valid and point_not_in_path and color_check
+        return move_valid and point_not_in_path and color_check and path_is_clear
 
     def _complete_current_path(self):
         """Hoàn thiện đường đi"""
@@ -215,6 +239,7 @@ class GameController:
 
     def _show_victory_message(self):
         """Hiển thị thông báo chiến thắng"""
+        
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setText("Congratulations!")

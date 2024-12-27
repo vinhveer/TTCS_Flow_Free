@@ -115,25 +115,27 @@ conn = [[Info() for _ in range(N + 1)] for _ in range(N + 1)]
 h = [{} for _ in range(N * N + 2)]
 dir = [[-1, 0], [0, -1], [1, 0], [0, 1]]
 
+def initialize_global_variables(N):
+    """Khởi tạo lại tất cả các biến toàn cục"""
+    global board, color, conn, h, dir
+    board = [[0] * (N + 1) for _ in range(N + 1)]
+    color = [[0] * (N + 1) for _ in range(N + 1)]
+    conn = [[Info() for _ in range(N + 1)] for _ in range(N + 1)]
+    h = [{} for _ in range(N * N + 2)]
+    dir = [[-1, 0], [0, -1], [1, 0], [0, 1]]
+
 def Slove(original_board, n, m):
-    board = original_board
-
-    print(n, m)
-    for row in board:
-        print(row)
-
-    # Tạo board mới với kích thước (n+1) x (m+1) và thêm hàng/cột 0
-    board = [[0] * (m + 1) for _ in range(n + 1)]  # Tạo ma trận toàn 0
-
-    # Copy giá trị từ original_board sang board, bắt đầu từ vị trí [1][1]
-    for i in range(n):
-        for j in range(m):
-            board[i + 1][j + 1] = original_board[i][j]
-
-    # In ra để kiểm tra
-    for row in board:
-        print(row)
+    """Hàm giải game"""
+    global board
     
+    # 1. Khởi tạo lại các biến toàn cục
+    initialize_global_variables(max(n, m))
+    
+    # 2. Copy dữ liệu từ original_board sang board mới
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            board[i][j] = original_board[i-1][j-1]  # Lưu ý offset do board mới có thêm hàng/cột 0
+
     h[1][State(0)] = (State(0), Info())
     # Trong vòng lặp chính
     for i in range(1, n + 1):
