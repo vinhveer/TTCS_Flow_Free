@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QMessageBox, QWidget, QPushButton
+from collections import deque
 
 from GridData import GridData
 from GameRender import GameRenderer
@@ -26,6 +27,10 @@ class GameController:
         self.start_point = None
         self.is_drawing = False
         self.path_connections = set()
+
+        self.paths_to_animate = []
+        self.current_path_index = 0
+        self.current_point_index = 0
 
         self.renderer = GameRenderer(self)
         self._update_grid_parameters()
@@ -91,39 +96,46 @@ class GameController:
                 self.renderer.update()
 
     def handle_mouse_move(self, x, y):
-        """Xử lý sự kiện di chuyển chuột"""
+        """Xử lý di chuyển chuột theo lưới"""
         if not self.is_drawing or not self.current_path:
             return
 
+        # Tính toạ độ lưới từ toạ độ pixel
         col = (x - self.window_padding) // self.cell_size
         row = (y - self.window_padding) // self.cell_size
+        
+        if not (0 <= row < self.grid_size and 0 <= col < self.grid_size):
+            return
+            
+        # Lấy điểm cuối cùng trong path
+        last_row, last_col = self.current_path[-1]
+        
+        # Tính delta di chuyển
+        row_delta = row - last_row 
+        col_delta = col - last_col
+        
+        # Chỉ xử lý khi di chuyển sang ô mới
+        if row_delta == 0 and col_delta == 0:
+            return
+            
+        # Ưu tiên chiều di chuyển có delta lớn hơn
+        if abs(row_delta) > abs(col_delta):
+            row = last_row + (1 if row_delta > 0 else -1)
+            col = last_col
+        else:
+            row = last_row
+            col = last_col + (1 if col_delta > 0 else -1)
 
-        if 0 <= row < self.grid_size and 0 <= col < self.grid_size:
-            # Nếu điểm hiện tại đã có trong đường đi thì bỏ qua
-            if (row, col) in self.current_path:
-                # Nếu quay lại điểm trước đó, xóa điểm cuối cùng
-                if len(self.current_path) > 1 and (row, col) == self.current_path[-2]:
-                    last_row, last_col = self.current_path[-1]
-                    self.grid_data.path_grid[last_row][last_col] = 0
-                    self.current_path.pop()
-                    self.renderer.update()
-                return
-
-            # Kiểm tra nước đi có hợp lệ không
-            if self._is_valid_move(row, col):
-                # Kiểm tra nếu gặp điểm đích cùng màu
-                if self.grid_data.is_endpoint(row, col, self.current_color_number):
-                    self.current_path.append((row, col))
-                    self.grid_data.update_path(row, col, self.current_color_number)
-                    
-                    # Tự động kết thúc đường
-                    self._complete_current_path()
-                    return
-
-                # Thêm điểm vào đường đi
+        if self._is_valid_move(row, col):
+            if self.grid_data.is_endpoint(row, col, self.current_color_number):
                 self.current_path.append((row, col))
                 self.grid_data.update_path(row, col, self.current_color_number)
-                self.renderer.update()
+                self._complete_current_path()
+                return
+
+            self.current_path.append((row, col))
+            self.grid_data.update_path(row, col, self.current_color_number)
+            self.renderer.update()
 
     def handle_mouse_release(self, x, y):
         """Xử lý sự kiện nhả chuột"""
@@ -310,64 +322,54 @@ class GameController:
             self.show_answer(answer_grid)
 
     def show_answer(self, answer_grid):
-        """Hiển thị đáp án theo hướng từ điểm đầu đến điểm cuối"""
-        # Reset trạng thái
+        """Display the solution paths"""
+        # Reset state
         self.completed_paths.clear()
         self.grid_data.path_grid = [[0 for _ in range(self.grid_size)] for _ in range(self.grid_size)]
         
-        # Tìm điểm đầu và điểm cuối cho mỗi màu
-        endpoints = {}  # {color: (start_point, end_point)}
+        # Find start and end points for each color
+        endpoints = {}  # {color: [points]}
         
-        # Quét để tìm các điểm đầu-cuối
+        # Scan to find start and end points
         for row in range(self.grid_size):
             for col in range(self.grid_size):
                 color = self.grid_data.get_color_point(row, col)
                 if color > 0:
                     if color not in endpoints:
-                        endpoints[color] = [(row, col)]  # điểm đầu
+                        endpoints[color] = [(row, col)]
                     else:
-                        endpoints[color].append((row, col))  # điểm cuối
+                        endpoints[color].append((row, col))
 
-        # Tìm đường đi cho từng màu
+        # Ensure each color has exactly two endpoints
         for color, points in endpoints.items():
-            if len(points) == 2:
-                start, end = points
-                path = self._find_path(answer_grid, start, end, color)
-                if path:
-                    # Cập nhật path_grid
-                    for r, c in path:
-                        self.grid_data.path_grid[r][c] = color
-                    # Thêm vào completed_paths
-                    self.completed_paths.append((path, self.grid_data.get_color(color)))
-
-        self.renderer.update()
+            if len(points) != 2:
+                continue  # Skip colors with incorrect number of endpoints
+            start, end = points
+            path = self._find_path(answer_grid, start, end, color)
+            if path:
+                # Update path_grid for the entire path
+                for r, c in path:
+                    self.grid_data.path_grid[r][c] = color
+                self.renderer.update()  # Update renderer once per path
+                self.completed_paths.append((path, self.grid_data.get_color(color)))
 
     def _find_path(self, answer_grid, start, end, color):
-        """Tìm đường đi từ điểm start đến end theo màu color"""
-        path = [start]
-        current = start
+        """Find path from start to end using BFS"""
+        visited = set()
+        queue = deque()
+        queue.append((start, []))
+        visited.add(start)
         
-        # Tiếp tục tìm cho đến khi đến điểm cuối
-        while current != end:
-            next_point = None
-            # Kiểm tra 4 hướng: phải, xuống, trái, lên
-            for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-                next_row = current[0] + dr
-                next_col = current[1] + dc
-                
-                # Kiểm tra điểm tiếp theo có hợp lệ không
-                if (0 <= next_row < self.grid_size and 
-                    0 <= next_col < self.grid_size and
-                    answer_grid[next_row][next_col] == color and
-                    (next_row, next_col) not in path):
-                    next_point = (next_row, next_col)
-                    break
+        while queue:
+            current, path = queue.popleft()
+            if current == end:
+                return path + [current]
             
-            if next_point:
-                path.append(next_point)
-                current = next_point
-            else:
-                # Không tìm thấy đường đi
-                return None
-                
-        return path
+            for dr, dc in [(0,1),(1,0),(0,-1),(-1,0)]:
+                nr, nc = current[0]+dr, current[1]+dc
+                if 0 <= nr < self.grid_size and 0 <= nc < self.grid_size:
+                    if answer_grid[nr][nc] == color and (nr, nc) not in visited:
+                        visited.add((nr, nc))
+                        queue.append(((nr, nc), path + [current]))
+        
+        return None

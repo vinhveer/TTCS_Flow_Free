@@ -7,7 +7,7 @@ from GameController import GameController
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Flow Free Game - ")
+        self.setWindowTitle("Flow Free Game")
         self.setGeometry(100, 100, 1000, 800)
 
         # Định nghĩa difficulty_levels là thuộc tính của class
@@ -50,10 +50,6 @@ class MainWindow(QMainWindow):
         self.game_controller = GameController(difficulty, level)
         self.game_layout.addWidget(self.game_controller.renderer)
 
-    def update_levels(self, difficulty):
-        self.level_combo.clear()
-        self.level_combo.addItems(self.difficulty_levels[difficulty])
-
     def _create_control_panel(self):
         control_panel = QWidget()
         control_panel.setFixedWidth(300)
@@ -65,19 +61,20 @@ class MainWindow(QMainWindow):
             
             QLabel {
                 font-size: 25px;
-                font-weight: bold;
+                font-weight: semibold;
                 color: #2c3e50;
                 padding: 5px 0;
             }
             
             QLabel#title {
-                font-size: 32px;
+                font-size: 40px;
                 font-weight: bold;
                 color: #2c3e50;
                 padding: 20px 0;
                 margin-bottom: 20px;
+                width: 100px;
             }
-            
+                                    
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -133,11 +130,10 @@ class MainWindow(QMainWindow):
         control_layout.setSpacing(15)
 
         # Title
-        title_label = QLabel("Flow Free Game")
+        title_label = QLabel("Flow Free")
         title_label.setObjectName("title")
-        title_label.setAlignment(Qt.AlignCenter)
         control_layout.addWidget(title_label)
-        
+
         # Difficulty section
         difficulty_label = QLabel("Difficulty")
         self.difficulty_combo = QComboBox()
@@ -155,26 +151,32 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(level_label)
         control_layout.addWidget(self.level_combo)
         
-        # Kết nối signal để cập nhật levels khi difficulty thay đổi
-        self.difficulty_combo.currentTextChanged.connect(self.update_levels)
-        
-        # Add some space before buttons
-        control_layout.addSpacing(20)
-        
-        # Buttons
-        self.play_button = QPushButton("Play")
+        # Reset button
         self.reset_button = QPushButton("Reset")
         self.reset_button.setObjectName("resetButton")
-        
-        control_layout.addWidget(self.play_button)
         control_layout.addWidget(self.reset_button)
         
-        self.play_button.clicked.connect(self.start_new_game)
+        # Connect signals
+        self.difficulty_combo.currentTextChanged.connect(self.on_difficulty_changed)
+        self.level_combo.currentTextChanged.connect(self.on_level_changed)
         self.reset_button.clicked.connect(self.reset_game)
         
         control_layout.addStretch()
-        
         return control_panel
+
+    def on_difficulty_changed(self, difficulty):
+        # Update levels list
+        self.level_combo.blockSignals(True)  # Prevent level change signal while updating
+        self.level_combo.clear()
+        self.level_combo.addItems(self.difficulty_levels[difficulty])
+        self.level_combo.blockSignals(False)
+        
+        # Start new game
+        self.start_new_game()
+
+    def on_level_changed(self, level):
+        if level:  # Check if level is not empty
+            self.start_new_game()
 
     def start_new_game(self):
         difficulty = self.difficulty_combo.currentText().lower()
