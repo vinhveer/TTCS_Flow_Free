@@ -1,4 +1,6 @@
-from PyQt5.QtWidgets import QMessageBox, QWidget, QPushButton
+from PyQt5.QtWidgets import QMessageBox, QPushButton
+from PyQt5.QtCore import QTimer
+
 from collections import deque
 
 from GridData import GridData
@@ -249,13 +251,20 @@ class GameController:
         self.setup()
 
     def _show_victory_message(self):
-        """Hiển thị thông báo chiến thắng"""
+        """Hiển thị thông báo chiến thắng với animation và style đẹp mắt"""
         
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Information)
-        msg_box.setText("Congratulations!")
-        msg_box.setInformativeText("You've completed the Flow Free game!")
-        msg_box.setWindowTitle("Victory")
+        
+        # Tạo nội dung thông báo với emoji
+        title_text = "🏆 You are Complete! 🏆"
+        main_text = """
+            <p>Congratulations! You have completed the Game.</p>
+        """
+        
+        msg_box.setWindowTitle(title_text)
+        msg_box.setText(main_text)
+        msg_box.setStandardButtons(QMessageBox.Ok)
         msg_box.exec_()
 
     def show_answer(self, answer_grid):
@@ -305,6 +314,7 @@ class GameController:
             # Cập nhật path_grid
             for row, col in path:
                 self.grid_data.path_grid[row][col] = color
+                
             # Thêm vào completed_paths
             self.completed_paths.append((path, self.grid_data.get_color(color)))
 
